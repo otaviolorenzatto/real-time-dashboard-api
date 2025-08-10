@@ -1,0 +1,405 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard em Tempo Real</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            text-align: center;
+            color: white;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+        }
+
+        .status {
+            display: inline-block;
+            padding: 8px 16px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin-top: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .status.connected {
+            background-color: #4CAF50;
+            color: white;
+        }
+
+        .status.disconnected {
+            background-color: #f44336;
+            color: white;
+        }
+
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.1);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.2);
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover {
+            transform: translateY(-5px);
+        }
+
+        .card-title {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #333;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .metric {
+            font-size: 2.5em;
+            font-weight: bold;
+            text-align: center;
+            margin: 20px 0;
+            transition: color 0.3s ease;
+        }
+
+        .cpu-metric {
+            color: #2196F3;
+        }
+
+        .ram-metric {
+            color: #FF9800;
+        }
+
+        .disk-metric {
+            color: #00ff00;
+        }
+
+        .progress-bar {
+            width: 100%;
+            height: 20px;
+            background-color: #e0e0e0;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+
+        .progress-fill {
+            height: 100%;
+            transition: width 0.5s ease;
+            border-radius: 10px;
+        }
+
+        .cpu-progress {
+            background: linear-gradient(90deg, #2196F3, #21CBF3);
+        }
+
+        .ram-progress {
+            background: linear-gradient(90deg, #FF9800, #FFC107);
+        }
+
+        .disk-progress {
+            background: linear-gradient(90deg, #00ff00, #6ef56e);
+        }
+
+        .log-container {
+            background: rgba(0, 0, 0, 0.8);
+            border-radius: 15px;
+            padding: 20px;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            margin-bottom: 5px;
+            opacity: 0;
+            animation: fadeIn 0.5s ease forwards;
+        }
+
+        @keyframes fadeIn {
+            to { opacity: 1; }
+        }
+
+        .timestamp {
+            color: #888;
+            font-size: 0.8em;
+        }
+
+        .icon {
+            width: 24px;
+            height: 24px;
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🖥️ Dashboard em Tempo Real</h1>
+            <div id="connectionStatus" class="status disconnected">Desconectado</div>
+        </div>
+
+        <div class="dashboard">
+            <div class="card">
+                <div class="card-title">
+                    <span>💻</span>
+                    CPU Usage
+                </div>
+                <div id="cpuValue" class="metric cpu-metric">0%</div>
+                <div class="progress-bar">
+                    <div id="cpuProgress" class="progress-fill cpu-progress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <span>🧠</span>
+                    RAM Usage
+                </div>
+                <div id="ramValue" class="metric ram-metric">0%</div>
+                <div class="progress-bar">
+                    <div id="ramProgress" class="progress-fill ram-progress" style="width: 0%"></div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-title">
+                    <span>💾</span>
+                    DISK Usage
+                </div>
+                <div id="diskValue" class="metric disk-metric">0%</div>
+                <div class="progress-bar">
+                    <div id="diskProgress" class="progress-fill disk-progress" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-title">
+                <span>📊</span>
+                Log de Atividades
+            </div>
+            <div id="logContainer" class="log-container">
+                <div class="log-entry">Aguardando conexão...</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class DashboardWebSocket {
+            constructor() {
+                this.ws = null;
+                this.reconnectInterval = 3000;
+                this.maxReconnectAttempts = 10;
+                this.reconnectAttempts = 0;
+                
+                this.connect();
+            }
+
+            connect() {
+                try {
+                    this.ws = new WebSocket('ws://localhost:8888/ws');
+                    
+                    this.ws.onopen = (event) => {
+                        console.log('Conectado ao WebSocket');
+                        this.updateConnectionStatus(true);
+                        this.addLog('Conectado ao servidor WebSocket', 'success');
+                        this.reconnectAttempts = 0;
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        try {
+                            const data = JSON.parse(event.data);
+                            this.handleMessage(data);
+                        } catch (error) {
+                            console.error('Erro ao processar mensagem:', error);
+                            this.addLog(`Erro ao processar mensagem: ${error.message}`, 'error');
+                        }
+                    };
+
+                    this.ws.onclose = (event) => {
+                        console.log('Conexão WebSocket fechada');
+                        this.updateConnectionStatus(false);
+                        this.addLog('Conexão perdida. Tentando reconectar...', 'warning');
+                        this.scheduleReconnect();
+                    };
+
+                    this.ws.onerror = (error) => {
+                        console.error('Erro WebSocket:', error);
+                        this.addLog('Erro na conexão WebSocket', 'error');
+                    };
+
+                } catch (error) {
+                    console.error('Erro ao conectar:', error);
+                    this.addLog(`Erro ao conectar: ${error.message}`, 'error');
+                    this.scheduleReconnect();
+                }
+            }
+
+            handleMessage(data) {
+                if (data.type === 'connection') {
+                    this.addLog(data.message, 'info');
+                    return;
+                }
+
+                try {
+                    let systemData;
+                    if (typeof data === 'string') {
+                        systemData = JSON.parse(data);
+                    } else {
+                        systemData = data;
+                    }
+
+                    if (systemData.cpu !== undefined && systemData.ram !== undefined) {
+                        this.updateMetrics(systemData.cpu, systemData.ram, systemData.disk);
+                        this.addLog(`CPU: ${systemData.cpu}% | RAM: ${systemData.ram}% | DISK: ${systemData.disk}%`, 'data');
+                    } else {
+                        this.addLog(`Dados recebidos: ${JSON.stringify(systemData)}`, 'info');
+                    }
+                } catch (error) {
+                    this.addLog(`Mensagem recebida: ${data}`, 'info');
+                }
+            }
+
+            updateMetrics(cpu, ram, disk) {
+                document.getElementById('cpuValue').textContent = `${cpu.toFixed(1)}%`;
+                document.getElementById('ramValue').textContent = `${ram.toFixed(1)}%`;
+                document.getElementById('diskValue').textContent = `${disk.toFixed(1)}%`;
+                
+                document.getElementById('cpuProgress').style.width = `${cpu}%`;
+                document.getElementById('ramProgress').style.width = `${ram}%`;
+                document.getElementById('diskProgress').style.width = `${disk}%`;
+
+                this.addPulseEffect('cpuValue');
+                this.addPulseEffect('ramValue');
+                this.addPulseEffect('diskValue');
+            }
+
+            addPulseEffect(elementId) {
+                const element = document.getElementById(elementId);
+                element.classList.add('pulse');
+                setTimeout(() => {
+                    element.classList.remove('pulse');
+                }, 1000);
+            }
+
+            updateConnectionStatus(connected) {
+                const statusElement = document.getElementById('connectionStatus');
+                if (connected) {
+                    statusElement.textContent = 'Conectado';
+                    statusElement.className = 'status connected';
+                } else {
+                    statusElement.textContent = 'Desconectado';
+                    statusElement.className = 'status disconnected';
+                }
+            }
+
+            addLog(message, type = 'info') {
+                const logContainer = document.getElementById('logContainer');
+                const timestamp = new Date().toLocaleTimeString();
+                
+                const logEntry = document.createElement('div');
+                logEntry.className = 'log-entry';
+                
+                let color = '#00ff00';
+                let icon = 'ℹ️';
+                
+                switch(type) {
+                    case 'error':
+                        color = '#ff4444';
+                        icon = '❌';
+                        break;
+                    case 'warning':
+                        color = '#ffaa00';
+                        icon = '⚠️';
+                        break;
+                    case 'success':
+                        color = '#44ff44';
+                        icon = '✅';
+                        break;
+                    case 'data':
+                        color = '#44aaff';
+                        icon = '📊';
+                        break;
+                }
+                
+                logEntry.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${icon} <span style="color: ${color}">${message}</span>`;
+                
+                logContainer.appendChild(logEntry);
+                logContainer.scrollTop = logContainer.scrollHeight;
+                
+                if (logContainer.children.length > 50) {
+                    logContainer.removeChild(logContainer.firstChild);
+                }
+            }
+
+            scheduleReconnect() {
+                if (this.reconnectAttempts < this.maxReconnectAttempts) {
+                    this.reconnectAttempts++;
+                    setTimeout(() => {
+                        this.addLog(`Tentativa de reconexão ${this.reconnectAttempts}/${this.maxReconnectAttempts}`, 'warning');
+                        this.connect();
+                    }, this.reconnectInterval);
+                } else {
+                    this.addLog('Máximo de tentativas de reconexão atingido', 'error');
+                }
+            }
+
+            sendMessage(message) {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(message));
+                }
+            }
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            const dashboard = new DashboardWebSocket();
+            
+            window.dashboard = dashboard;
+            
+            console.log('Dashboard iniciado! Use window.dashboard para interagir via console.');
+        });
+    </script>
+</body>
+</html>
